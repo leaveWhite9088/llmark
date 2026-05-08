@@ -1,0 +1,23 @@
+{
+  "name": "llmark",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LLM 性能评测平台",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "dev:frontend": "pnpm --filter llmark-frontend dev",
+    "dev:backend": "pnpm --filter llmark-backend dev",
+    "build": "pnpm -r run build",
+    "build:frontend": "pnpm --filter llmark-frontend build",
+    "lint": "pnpm -r run lint",
+    "clean": "pnpm -r run clean"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "devDependencies": {
+    "@hd-agent-skills/andrej-karpathy-skills": "^1.0.0"
+  }
+}

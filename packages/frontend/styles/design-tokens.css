@@ -1,0 +1,222 @@
+/**
+ * LLMark Design Tokens
+ * 统一颜色系统 - 支持深色/浅色双主题
+ *
+ * 使用 CSS 变量定义所有颜色，确保全站一致性
+ * 所有组件应优先使用这些变量，避免硬编码颜色值
+ *
+ * 主题切换方式：在 html 元素上设置 data-theme="light" | "dark"
+ */
+
+/* ========================================
+   深色主题（默认）
+   ======================================== */
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* 背景层级 - 从深到浅 */
+  --color-bg-primary: #0a0a0f;
+  --color-bg-secondary: #0f0f14;
+  --color-bg-tertiary: #13131a;
+  --color-bg-quaternary: #1a1a24;
+
+  /* 背景叠加层 */
+  --color-bg-overlay-subtlest: rgba(255, 255, 255, 0.02);
+  --color-bg-overlay-subtle: rgba(255, 255, 255, 0.05);
+  --color-bg-overlay-default: rgba(255, 255, 255, 0.10);
+
+  /* 文字颜色 */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-tertiary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-text-disabled: #475569;
+
+  /* 边框颜色 */
+  --color-border-faint: rgba(255, 255, 255, 0.04);
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-light: rgba(255, 255, 255, 0.08);
+  --color-border-default: rgba(255, 255, 255, 0.10);
+  --color-border-medium: rgba(255, 255, 255, 0.12);
+  --color-border-strong: rgba(255, 255, 255, 0.15);
+  --color-border-focus: rgba(255, 255, 255, 0.25);
+
+  /* 滚动条 */
+  --color-scrollbar-track: rgba(255, 255, 255, 0.02);
+  --color-scrollbar-thumb: rgba(255, 255, 255, 0.10);
+  --color-scrollbar-thumb-hover: rgba(255, 255, 255, 0.15);
+
+  /* 阴影 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+
+  /* body 背景光晕 */
+  --body-glow-primary: rgba(99, 102, 241, 0.15);
+  --body-glow-secondary: rgba(139, 92, 246, 0.08);
+}
+
+/* ========================================
+   浅色主题
+   ======================================== */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* 背景层级 - 从浅到深 */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-bg-quaternary: #e2e8f0;
+
+  /* 背景叠加层（黑色透明度） */
+  --color-bg-overlay-subtlest: rgba(0, 0, 0, 0.02);
+  --color-bg-overlay-subtle: rgba(0, 0, 0, 0.04);
+  --color-bg-overlay-default: rgba(0, 0, 0, 0.08);
+
+  /* 文字颜色 - 反转 */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-disabled: #cbd5e1;
+
+  /* 边框颜色（黑色透明度） */
+  --color-border-faint: rgba(0, 0, 0, 0.04);
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-light: rgba(0, 0, 0, 0.08);
+  --color-border-default: rgba(0, 0, 0, 0.10);
+  --color-border-medium: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.15);
+  --color-border-focus: rgba(0, 0, 0, 0.25);
+
+  /* 滚动条 */
+  --color-scrollbar-track: rgba(0, 0, 0, 0.03);
+  --color-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --color-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+
+  /* 阴影（降低透明度以适应浅色背景） */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.10), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+
+  /* body 背景光晕（调暗） */
+  --body-glow-primary: rgba(99, 102, 241, 0.08);
+  --body-glow-secondary: rgba(139, 92, 246, 0.05);
+}
+
+/* ========================================
+   强调色（主题无关，保持一致）
+   ======================================== */
+:root {
+  --color-accent-primary: #6366f1;
+  --color-accent-primary-light: #818cf8;
+  --color-accent-primary-dark: #4f46e5;
+  --color-accent-primary-subtle: rgba(99, 102, 241, 0.15);
+
+  --color-accent-success: #34d399;
+  --color-accent-success-light: #6ee7b7;
+  --color-accent-success-dark: #10b981;
+  --color-accent-success-subtle: rgba(52, 211, 153, 0.15);
+
+  --color-accent-info: #60a5fa;
+  --color-accent-info-light: #93c5fd;
+  --color-accent-info-dark: #3b82f6;
+  --color-accent-info-subtle: rgba(96, 165, 250, 0.15);
+
+  --color-accent-warning: #fbbf24;
+  --color-accent-warning-light: #fcd34d;
+  --color-accent-warning-dark: #f59e0b;
+  --color-accent-warning-subtle: rgba(251, 191, 36, 0.15);
+
+  --color-accent-danger: #f87171;
+  --color-accent-danger-light: #fca5a5;
+  --color-accent-danger-dark: #ef4444;
+  --color-accent-danger-subtle: rgba(248, 113, 113, 0.15);
+
+  --color-accent-purple: #a78bfa;
+  --color-accent-purple-light: #c4b5fd;
+  --color-accent-purple-dark: #8b5cf6;
+
+  --shadow-glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+  --shadow-glow-success: 0 0 20px rgba(52, 211, 153, 0.3);
+}
+
+/* ========================================
+   间距 / 圆角 / 字体 / Z-Index（主题无关）
+   ======================================== */
+:root {
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.5rem;
+  --radius-full: 9999px;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-modal: 30;
+  --z-popover: 40;
+  --z-tooltip: 50;
+  --z-toast: 60;
+}
+
+/* ========================================
+   工具类 (Utility Classes)
+   ======================================== */
+
+/* 背景色 */
+.bg-theme-primary { background-color: var(--color-bg-primary); }
+.bg-theme-secondary { background-color: var(--color-bg-secondary); }
+.bg-theme-tertiary { background-color: var(--color-bg-tertiary); }
+.bg-theme-quaternary { background-color: var(--color-bg-quaternary); }
+.bg-theme-overlay-subtlest { background-color: var(--color-bg-overlay-subtlest); }
+.bg-theme-overlay-subtle { background-color: var(--color-bg-overlay-subtle); }
+.bg-theme-overlay-default { background-color: var(--color-bg-overlay-default); }
+
+/* 文字色 */
+.text-theme-primary { color: var(--color-text-primary); }
+.text-theme-secondary { color: var(--color-text-secondary); }
+.text-theme-tertiary { color: var(--color-text-tertiary); }
+.text-theme-muted { color: var(--color-text-muted); }
+.text-theme-disabled { color: var(--color-text-disabled); }
+
+/* 边框色 */
+.border-theme-faint { border-color: var(--color-border-faint); }
+.border-theme-subtle { border-color: var(--color-border-subtle); }
+.border-theme-light { border-color: var(--color-border-light); }
+.border-theme-default { border-color: var(--color-border-default); }
+.border-theme-medium { border-color: var(--color-border-medium); }
+.border-theme-strong { border-color: var(--color-border-strong); }
+.border-theme-focus { border-color: var(--color-border-focus); }
+
+/* 强调色文字 */
+.text-accent-primary { color: var(--color-accent-primary); }
+.text-accent-success { color: var(--color-accent-success); }
+.text-accent-info { color: var(--color-accent-info); }
+.text-accent-warning { color: var(--color-accent-warning); }
+.text-accent-danger { color: var(--color-accent-danger); }
+.text-accent-purple { color: var(--color-accent-purple); }
