@@ -2,21 +2,15 @@
 
 LLMark —— LLM 性能基准测试平台后端。
 
-技术栈：FastAPI + Pydantic + SQLAlchemy/Raw SQL + SQLite（开发）/ PostgreSQL（生产）。
+技术栈：FastAPI + Pydantic + asyncpg + PostgreSQL + Redis。
 
 ---
 
 ## 本地运行
 
-```powershell
+```bash
 conda activate llmark
 python -m uvicorn main:app --reload --host 127.0.0.1 --port 8011
-```
-
-或使用快捷脚本：
-
-```powershell
-.\scripts\start-backend.ps1
 ```
 
 ## 环境配置
@@ -24,7 +18,9 @@ python -m uvicorn main:app --reload --host 127.0.0.1 --port 8011
 复制 `.env.example` 为 `.env` 并填写密钥：
 
 ```env
-DATABASE_URL=sqlite:///./data/llmark-dev.db
+DATABASE_URL=postgresql://llmark:llmark_password@127.0.0.1:5432/llmark
+REDIS_URL=redis://127.0.0.1:6380/0
+CACHE_TTL_SECONDS=300
 GITHUB_CLIENT_ID=your_github_client_id
 GITHUB_CLIENT_SECRET=your_github_client_secret
 JWT_SECRET=replace_me_with_a_long_random_secret
@@ -34,23 +30,47 @@ ENV=development
 
 ## 数据库
 
-本地开发默认使用 SQLite：
+使用 Docker Compose 启动 PostgreSQL 和 Redis：
 
-```env
-DATABASE_URL=sqlite:///./data/llmark-dev.db
+```bash
+docker compose up -d
 ```
 
-生产环境使用 PostgreSQL，表结构初始化参考 `sql/init.sql`。
+服务说明：
 
-后端存储原始上报数据，查询时实时聚合。查询逻辑位于 `db/queries/`，按领域分组（leaderboard、detail、provider、model、me、catalog、users）。
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| PostgreSQL | 5432 | 主数据库 |
+| Redis | 6380 | 缓存层 |
+
+后端启动时自动创建表结构（`db/bootstrap.py`），无需手动执行 SQL。
 
 ### 初始元数据
 
-执行 `sql/seed_meta.sql` 填充 `model_meta`（模型标签/基本信息）和 `provider_info`（厂商描述/策略）表：
+执行 `sql/seed_meta.sql` 和 `sql/seed_meta_extra.sql` 填充 `model_meta` 和 `provider_info` 表：
 
 ```bash
-sqlite3 data/llmark-dev.db < sql/seed_meta.sql
+psql -h 127.0.0.1 -U llmark -d llmark -f sql/seed_meta.sql
+psql -h 127.0.0.1 -U llmark -d llmark -f sql/seed_meta_extra.sql
 ```
+
+## Redis 缓存
+
+Redis 用于缓存高频查询结果，减少数据库压力：
+
+| 缓存键前缀 | 数据 | TTL |
+|-----------|------|-----|
+| `leaderboard` | 性能排行榜 | 5 分钟 |
+| `users_leaderboard` | 用户贡献排行榜 | 5 分钟 |
+| `models_catalog` | 模型目录 | 5 分钟 |
+| `providers_catalog` | 厂商目录 | 5 分钟 |
+| `filter_options` | 筛选项元数据 | 10 分钟 |
+
+新报告提交时自动清除相关缓存，确保数据一致性。
+
+缓存工具函数位于 `db/cache.py`，配置项：
+- `REDIS_URL` — Redis 连接地址
+- `CACHE_TTL_SECONDS` — 默认缓存过期时间（秒）
 
 ## 主要接口
 
@@ -78,7 +98,6 @@ sqlite3 data/llmark-dev.db < sql/seed_meta.sql
 - `GET /v1/model/{model}/overview` — 模型概览
 - `GET /v1/model/{model}/entries` — 模型在各厂商下的表现条目
 - `GET /v1/model/{model}/provider-comparison` — 供应商对比（按时间维度）
-- `GET /v1/model/{model}/comparison` — 同上，别名路由
 - `GET /v1/model/{model}/insights` — 模型洞察摘要
 
 ### 厂商详情
@@ -96,10 +115,6 @@ sqlite3 data/llmark-dev.db < sql/seed_meta.sql
 - `GET /v1/me/contribution-heatmap` — 贡献热力图
 - `GET /v1/me/profile` — 用户详细档案
 
-### 已废弃
-- ~~`GET /v1/models/{model}/providers`~~ — 由 `/v1/model/{model}/entries` 完全覆盖
-- ~~`GET /v1/provider/{provider}/stats`~~ — 数据已合并至 `overview`
-
 ## 聚合说明
 
 - 排行榜默认时间窗口为 `24h`。
@@ -109,10 +124,6 @@ sqlite3 data/llmark-dev.db < sql/seed_meta.sql
   - `medium`：<= 16384 tokens
   - `long`：> 16384 tokens
 - `input_length_bucket` 是分析/筛选维度，默认不拆分首页排行榜行。
-- `GET /v1/detail` 为供应商维度：一个供应商 + 一个模型。
-- `GET /v1/detail-by-model` 为模型维度：一个模型跨所有供应商，含各供应商指标和趋势。
-- `GET /v1/provider/{provider}/models` 每模型返回一行。
-- `GET /v1/model/{model}/entries` 每供应商返回一行。
 
 ## 动态筛选项
 
@@ -140,7 +151,7 @@ JWT_SECRET=...
 本地联调时的服务地址：
 
 | 服务 | 地址 | 端口 |
-|---------|-----|------|
+|------|------|------|
 | 后端 API | `http://127.0.0.1:8011/v1` | 8011 |
 | 前端开发 | `http://127.0.0.1:3011` | 3011 |
 
@@ -148,12 +159,11 @@ JWT_SECRET=...
 
 ```env
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8011/v1
-NEXT_PUBLIC_USE_MOCK=false
 ```
 
 ## 接口示例
 
-```text
+```bash
 GET /v1/detail-by-model?model=gpt-4o&range=24h
 GET /v1/detail-by-model?model=gpt-4o&range=24h&input_length_bucket=short
 GET /v1/provider/openai/models?range=24h
@@ -162,16 +172,25 @@ GET /v1/models?range=24h
 GET /v1/providers?range=24h
 ```
 
----
+## 项目结构
 
-## 项目文档
-
-| 文档 | 说明 |
-|------|------|
-| `docs/API_REFERENCE.md` | 后端 API 参考文档（v0.2.0） |
-| `docs/API_ALIGNMENT.md` | 前后端 API 对齐清单 |
-| `docs/API_CHANGELOG_FOR_FRONTEND.md` | 后端变更说明（供前端对接） |
-| `docs/ARCHITECTURE.md` | 项目架构与数据流 |
-| `docs/ROUTER_GUIDE.md` | 新增 API 端点规范 |
-| `docs/SCHEMAS_GUIDE.md` | 请求/响应模型规范 |
-| `docs/DB_GUIDE.md` | 数据库查询层规范 |
+```
+backend/
+├── config.py           # 配置管理
+├── constants.py        # 共享常量
+├── main.py             # FastAPI 应用入口
+├── limiter.py          # 限流器
+├── db/
+│   ├── adapter.py      # 数据库适配器
+│   ├── bootstrap.py    # 表结构初始化
+│   ├── cache.py        # Redis 缓存工具
+│   ├── connection.py   # 数据库连接管理
+│   └── queries/        # 查询层（按领域分组）
+├── dependencies/       # FastAPI 依赖注入
+├── routers/            # API 路由
+├── schemas/            # Pydantic 模型
+├── utils/              # 工具函数
+├── scripts/            # 迁移脚本
+├── sql/                # SQL 初始化脚本
+└── tests/              # 测试
+```
