@@ -7,16 +7,72 @@ from __future__ import annotations
 
 import json
 import logging
+import socket
 from urllib import request as urllib_request
+from urllib.parse import urlparse
 
 from llmark.benchmark.providers import get_provider_preset
 
 logger = logging.getLogger("llmark.benchmark")
 
+_SOCKET_TIMEOUT = 2  # seconds – used for both connect and read
+
+
+def _precheck_connectivity(url: str, timeout: int = _SOCKET_TIMEOUT) -> bool:
+    """Pre-check TCP connectivity with enforced timeout.
+
+    On Windows, ``urlopen(timeout=...)`` does not propagate to the underlying
+    socket for HTTPS connections by hostname – the actual wait is 5× the
+    requested value (e.g. 2s → 10s).  This function resolves the hostname to
+    an IP address and connects by IP, which correctly respects the timeout.
+    Returns True if the host is reachable, False otherwise.
+    """
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    if not hostname:
+        return False
+    try:
+        for family, _, _, _, sockaddr in socket.getaddrinfo(hostname, port):
+            if family == socket.AF_INET:
+                ip, p = sockaddr
+                sock = socket.create_connection((ip, p), timeout=timeout)
+                sock.close()
+                return True
+        # fallback: try first result
+        results = socket.getaddrinfo(hostname, port)
+        if results:
+            ip, p = results[0][4][:2]
+            sock = socket.create_connection((ip, p), timeout=timeout)
+            sock.close()
+            return True
+    except (socket.timeout, OSError):
+        pass
+    return False
+
+
+def _urlopen(req: urllib_request.Request, timeout: int = _SOCKET_TIMEOUT):
+    """urlopen wrapper that enforces socket-level timeout.
+
+    On Windows, ``urlopen(timeout=...)`` does NOT propagate to the underlying
+    socket for HTTPS connections by hostname, causing DNS/connection hangs to
+    last 5× the requested timeout.  Setting ``socket.setdefaulttimeout`` before
+    the call fixes the socket-level timeout, and ``_precheck_connectivity`` is
+    used externally to fast-fail unreachable hosts.
+    """
+    old_timeout = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(timeout)
+        return urllib_request.urlopen(req, timeout=timeout)
+    finally:
+        socket.setdefaulttimeout(old_timeout)
+
 
 def _fetch_openai_models(base_url: str, api_key: str) -> list[str] | None:
     """标准 OpenAI 兼容格式探测：Bearer 鉴权 + /v1/models 端点。"""
     url = base_url.rstrip("/") + "/models"
+    if not _precheck_connectivity(url):
+        return None
     req = urllib_request.Request(
         url,
         headers={
@@ -25,7 +81,7 @@ def _fetch_openai_models(base_url: str, api_key: str) -> list[str] | None:
         },
     )
     try:
-        with urllib_request.urlopen(req, timeout=10) as resp:
+        with _urlopen(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             models = data.get("data", [])
             ids = [m.get("id") for m in models if m.get("id")]
@@ -38,9 +94,11 @@ def _fetch_openai_models(base_url: str, api_key: str) -> list[str] | None:
 def _fetch_google_models(api_key: str) -> list[str] | None:
     """Google Gemini 降级探测：?key= 参数鉴权 + /v1beta/models 端点。"""
     url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    if not _precheck_connectivity(url):
+        return None
     req = urllib_request.Request(url, headers={"Accept": "application/json"})
     try:
-        with urllib_request.urlopen(req, timeout=10) as resp:
+        with _urlopen(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             models = data.get("models", [])
             ids = []
@@ -60,6 +118,8 @@ def _fetch_google_models(api_key: str) -> list[str] | None:
 def _fetch_anthropic_models(base_url: str, api_key: str) -> list[str] | None:
     """Anthropic 降级探测：x-api-key 鉴权 + /v1/models 端点。"""
     url = base_url.rstrip("/") + "/models"
+    if not _precheck_connectivity(url):
+        return None
     req = urllib_request.Request(
         url,
         headers={
@@ -69,7 +129,7 @@ def _fetch_anthropic_models(base_url: str, api_key: str) -> list[str] | None:
         },
     )
     try:
-        with urllib_request.urlopen(req, timeout=10) as resp:
+        with _urlopen(req) as resp:
             data = json.loads(resp.read().decode("utf-8"))
             models = data.get("data", [])
             ids = [m.get("id") for m in models if m.get("id")]

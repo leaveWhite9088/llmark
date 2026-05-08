@@ -36,7 +36,7 @@ def _try_preset(preset) -> DetectedProvider | None:
     return None
 
 
-def detect_providers(max_workers: int = 4) -> list[DetectedProvider]:
+def detect_providers(max_workers: int = 12) -> list[DetectedProvider]:
     """Detect all available providers by probing /v1/models in parallel.
 
     Returns a list of DetectedProvider ordered by discovery time.
@@ -55,7 +55,7 @@ def detect_providers(max_workers: int = 4) -> list[DetectedProvider]:
     return available
 
 
-def detect_provider_by_key(api_key: str, max_workers: int = 4) -> DetectedProvider | None:
+def detect_provider_by_key(api_key: str, max_workers: int = 12) -> DetectedProvider | None:
     """用给定的 API Key 遍历所有预设厂商，自动识别可用厂商。
 
     并发尝试用 *api_key* 访问每个内置厂商的 ``/v1/models`` 接口，
