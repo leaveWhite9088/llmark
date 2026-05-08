@@ -1,0 +1,53 @@
+services:
+  postgresql-llmark:
+    image: postgres:16-alpine
+    container_name: postgresql-llmark
+    environment:
+      POSTGRES_USER: llmark
+      POSTGRES_PASSWORD: llmark_password
+      POSTGRES_DB: llmark
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U llmark -d llmark"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-llmark:
+    image: redis:7-alpine
+    container_name: redis-llmark
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  test-runner:
+    image: python:3.11-slim
+    container_name: llmark-test-runner
+    working_dir: /app
+    volumes:
+      - .:/app
+      - pip_cache:/root/.cache/pip
+    environment:
+      - DATABASE_URL=postgresql://llmark:llmark_password@postgresql-llmark:5432/llmark_test
+      - PYTHONDONTWRITEBYTECODE=1
+    command: >
+      bash -c "pip install -r requirements.txt pytest -q && pytest tests/ -q"
+    depends_on:
+      postgresql-llmark:
+        condition: service_healthy
+    profiles:
+      - test
+
+volumes:
+  postgres_data:
+  redis_data:
+  pip_cache:
